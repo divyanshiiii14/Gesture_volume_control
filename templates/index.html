@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gesture Volume Control</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            background: #020617;
+            color: white;
+            font-family: Arial;
+            text-align: center;
+        }
+        img {
+            border: 3px solid #38bdf8;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px 25px;
+            font-size: 16px;
+            background: #22c55e;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            color: black;
+        }
+        canvas {
+            background: #020617;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>🎛 Gesture Volume Control</h1>
+
+<img src="/video_feed" width="640" height="480">
+
+<br><br>
+<button id="freezeBtn" onclick="toggleFreeze()">Freeze</button>
+
+<h2>📈 Live Volume vs Time</h2>
+<canvas id="volumeChart" width="800" height="300"></canvas>
+
+<script>
+let frozen = false;
+
+const ctx = document.getElementById('volumeChart').getContext('2d');
+const volumeChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [{
+            label: 'Volume (%)',
+            data: [],
+            borderColor: 'cyan',
+            borderWidth: 2,
+            tension: 0.3
+        }]
+    },
+    options: {
+        animation: false,
+        scales: {
+            x: { title: { display: true, text: 'Time (s)', color: 'white' } },
+            y: { min: 0, max: 100, title: { display: true, text: 'Volume %', color: 'white' } }
+        },
+        plugins: {
+            legend: { labels: { color: 'white' } }
+        }
+    }
+});
+
+function updateGraph() {
+    if (frozen) return;
+
+    fetch('/volume_data')
+        .then(res => res.json())
+        .then(data => {
+            volumeChart.data.labels = data.map(d => d.time);
+            volumeChart.data.datasets[0].data = data.map(d => d.volume);
+            volumeChart.update();
+        });
+}
+
+setInterval(updateGraph, 500);
+
+function toggleFreeze() {
+    fetch('/toggle_freeze', { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+            frozen = data.freeze;
+            document.getElementById("freezeBtn").innerText =
+                frozen ? "Unfreeze" : "Freeze";
+        });
+}
+</script>
+
+</body>
+</html>
